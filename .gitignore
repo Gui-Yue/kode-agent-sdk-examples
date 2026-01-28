@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data files (local)
+data/*.db
+data/*.sqlite
+
+# Lock files (optional, comment out if you want to commit)
+# pnpm-lock.yaml
+# package-lock.json
+
+# doc
+*.md
+!README.md
+!doc/**/*.md
+!README_en.md
+
+# workspace
+workspace*/

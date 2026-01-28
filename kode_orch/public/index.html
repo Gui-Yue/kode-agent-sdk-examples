@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Assistant</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: 1fr 320px; }
+
+#header { grid-column: 1 / -1; padding: 12px 20px; background: #16213e; border-bottom: 1px solid #0f3460; display: flex; align-items: center; gap: 12px; }
+#header h1 { font-size: 16px; color: #e94560; }
+#token-input { background: #0f3460; border: 1px solid #533483; color: #e0e0e0; padding: 4px 8px; border-radius: 4px; font-size: 12px; width: 200px; }
+
+/* Left: Chat area */
+#chat-area { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; overflow: hidden; }
+#messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Right: Task panel */
+#task-panel { grid-column: 2; grid-row: 2 / 4; background: #0d1b2a; border-left: 1px solid #1b2838; display: flex; flex-direction: column; overflow: hidden; }
+#task-panel-header { padding: 12px 16px; font-size: 13px; font-weight: 600; color: #a0b0c0; border-bottom: 1px solid #1b2838; letter-spacing: 0.5px; }
+#task-tree { flex: 1; overflow-y: auto; padding: 12px 16px; font-size: 12px; }
+
+/* Input */
+#input-area { grid-column: 1; grid-row: 3; padding: 12px 20px; background: #16213e; border-top: 1px solid #0f3460; display: flex; gap: 8px; }
+#msg-input { flex: 1; background: #0f3460; border: 1px solid #533483; color: #e0e0e0; padding: 10px 14px; border-radius: 6px; font-size: 14px; outline: none; }
+#msg-input:focus { border-color: #e94560; }
+#send-btn { background: #e94560; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+#send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Messages */
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 8px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+.msg-user { align-self: flex-end; background: #0f3460; border: 1px solid #533483; }
+.msg-assistant { align-self: flex-start; background: #16213e; border: 1px solid #1a1a4e; }
+.msg-system { align-self: center; background: #2a1a3e; border: 1px solid #533483; font-size: 12px; color: #a0a0c0; }
+.tool-panel { background: #0d1b2a; border: 1px solid #1b2838; border-radius: 4px; margin-top: 6px; font-size: 12px; }
+.tool-header { padding: 6px 10px; cursor: pointer; color: #7b8794; }
+.tool-header:hover { color: #e0e0e0; }
+.tool-body { padding: 6px 10px; display: none; color: #a0a0c0; max-height: 200px; overflow-y: auto; }
+.approval-dialog { background: #2a1a3e; border: 2px solid #e94560; border-radius: 8px; padding: 16px; margin-top: 8px; }
+.approval-overlay { position: fixed; bottom: 70px; left: 20px; right: 340px; z-index: 1000; }
+.approval-modal { background: #1a1a2e; border: 2px solid #e94560; border-radius: 12px; padding: 20px; box-shadow: 0 -4px 24px rgba(0,0,0,0.5); }
+.approval-modal button { padding: 8px 24px; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px; font-size: 14px; }
+.approval-dialog button { padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px; font-size: 13px; }
+.btn-confirm { background: #28a745; color: white; }
+.btn-cancel { background: #e94560; color: white; }
+.loading { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #e94560; animation: pulse 1s infinite; margin-left: 4px; }
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+code { background: #0d1b2a; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+pre { background: #0d1b2a; padding: 10px; border-radius: 4px; overflow-x: auto; margin: 6px 0; }
+pre code { background: none; padding: 0; }
+
+/* Task tree styles */
+.tree-node { position: relative; padding-left: 20px; margin-bottom: 2px; }
+.tree-node::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 1px; background: #2a3a4a; }
+.tree-node:last-child::before { bottom: 50%; }
+.tree-node::after { content: ''; position: absolute; left: 6px; top: 12px; width: 12px; height: 1px; background: #2a3a4a; }
+.tree-root { padding-left: 0; }
+.tree-root::before, .tree-root::after { display: none; }
+
+.tree-label { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 4px; line-height: 1.4; }
+.tree-label:hover { background: #111d2e; }
+.tree-icon { flex-shrink: 0; font-size: 11px; }
+.tree-name { color: #c0d0e0; font-weight: 600; }
+.tree-status { font-size: 11px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.tree-detail { color: #5b6b7b; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+
+.status-idle { color: #5b6b7b; }
+.status-running { color: #5bc0de; }
+.status-running-agent { color: #e94560; }
+.status-completed { color: #5cb85c; }
+.status-error { color: #d9534f; }
+
+.tree-spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid #1b2838; border-top-color: #5bc0de; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+.tree-spinner.agent { border-top-color: #e94560; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+.tree-children { margin-left: 0; }
+
+.tree-empty { color: #3a4a5a; font-style: italic; padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>AI Assistant</h1>
+  <input id="token-input" type="password" placeholder="Auth Token" />
+</div>
+
+<div id="chat-area">
+  <div id="messages"></div>
+</div>
+
+<div id="task-panel">
+  <div id="task-panel-header">任务流程</div>
+  <div id="task-tree">
+    <div class="tree-empty">等待任务...</div>
+  </div>
+</div>
+
+<div id="input-area">
+  <input id="msg-input" type="text" placeholder="输入消息..." autocomplete="off" />
+  <button id="send-btn">发送</button>
+</div>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('msg-input');
+const sendBtn = document.getElementById('send-btn');
+const tokenInput = document.getElementById('token-input');
+const taskTreeEl = document.getElementById('task-tree');
+
+tokenInput.value = localStorage.getItem('auth_token') || '';
+tokenInput.addEventListener('change', () => {
+  localStorage.setItem('auth_token', tokenInput.value);
+  connectEvents(); // 重连 EventSource
+});
+
+let sending = false;
+
+// ===== 后台任务节点（独立于 chat 流的任务树）=====
+const bgTasks = new Map(); // taskId -> { id, templateId, description, status, startTime }
+const bgTimers = new Map(); // taskId -> intervalId
+
+// ===== Task Tree State =====
+let taskTree = null;
+const activeTimers = new Map();
+
+function initTree() {
+  // 清除 chat 相关的 timers，保留 bg timers
+  for (const [k, t] of activeTimers) { clearInterval(t); }
+  activeTimers.clear();
+  taskTree = {
+    id: 'orchestrator',
+    type: 'orchestrator',
+    name: 'Orchestrator',
+    status: 'running',
+    startTime: Date.now(),
+    children: [],
+  };
+  renderTree();
+}
+
+function addChildNode(data) {
+  if (!taskTree) initTree();
+  const node = {
+    id: data.toolCallId || ('t-' + Date.now()),
+    type: 'tool',
+    name: data.name,
+    status: 'running',
+    startTime: Date.now(),
+    detail: '',
+    children: [],
+  };
+  if (typeof data.input === 'object') {
+    node.detail = JSON.stringify(data.input).slice(0, 80);
+  } else if (data.input) {
+    node.detail = String(data.input).slice(0, 80);
+  }
+  taskTree.children.push(node);
+  renderTree();
+  const timerId = setInterval(() => {
+    const el = document.getElementById('timer-' + node.id);
+    if (el) el.textContent = formatDuration(Date.now() - node.startTime);
+  }, 100);
+  activeTimers.set(node.id, timerId);
+}
+
+function completeChildNode(data) {
+  if (!taskTree) return;
+  const node = taskTree.children.find(c => c.id === data.toolCallId);
+  if (!node) return;
+  node.status = 'completed';
+  node.durationMs = data.durationMs || (Date.now() - node.startTime);
+  const t = activeTimers.get(node.id);
+  if (t) { clearInterval(t); activeTimers.delete(node.id); }
+  renderTree();
+}
+
+function errorChildNode(data) {
+  if (!taskTree) return;
+  const node = taskTree.children.find(c => c.id === data.toolCallId);
+  if (!node) return;
+  node.status = 'error';
+  node.error = data.error;
+  const t = activeTimers.get(node.id);
+  if (t) { clearInterval(t); activeTimers.delete(node.id); }
+  renderTree();
+}
+
+function finishTree() {
+  if (!taskTree) return;
+  taskTree.status = 'completed';
+  taskTree.durationMs = Date.now() - taskTree.startTime;
+  for (const [k, t] of activeTimers) { clearInterval(t); }
+  activeTimers.clear();
+  renderTree();
+}
+
+// ===== 后台任务处理（来自 /api/events SSE）=====
+function handleBgTaskUpdate(d) {
+  if (d.status === 'running') {
+    // 新任务启动
+    bgTasks.set(d.taskId, { ...d, startTime: Date.now() });
+    const timerId = setInterval(() => {
+      const el = document.getElementById('bg-timer-' + d.taskId);
+      const info = bgTasks.get(d.taskId);
+      if (el && info) el.textContent = formatDuration(Date.now() - info.startTime);
+    }, 100);
+    bgTimers.set(d.taskId, timerId);
+  } else {
+    // 完成或失败
+    const info = bgTasks.get(d.taskId);
+    if (info) {
+      info.status = d.status;
+      info.result = d.result;
+      info.error = d.error;
+      info.elapsed = d.elapsed;
+      info.sandboxUrl = d.sandboxUrl;
+      info.sandboxAlive = d.sandboxAlive;
+    }
+    const t = bgTimers.get(d.taskId);
+    if (t) { clearInterval(t); bgTimers.delete(d.taskId); }
+
+    // 在聊天区插入简要通知（Orchestrator 会通过 orchestrator_text 事件发送完整汇总）
+    if (d.status === 'completed') {
+      addMessage('system', `✅ 后台任务「${d.description}」已完成，等待 Orchestrator 汇总...`);
+      if (d.sandboxUrl) {
+        showSandboxPreview(d.taskId, d.sandboxUrl, d.description);
+      }
+    } else if (d.status === 'cancelled') {
+      addMessage('system', `⏹ 后台任务「${d.description}」已取消${d.cancelReason ? ': ' + d.cancelReason : ''}`);
+    } else if (d.status === 'failed') {
+      addMessage('system', `❌ 后台任务「${d.description}」失败: ${d.error || '未知错误'}`);
+    }
+  }
+  renderTree();
+}
+
+// ===== Orchestrator 自动回复状态 =====
+let orchAutoReplyDiv = null;
+let orchAutoReplyText = '';
+
+function handleOrchestratorEvent(event) {
+  switch (event.type) {
+    case 'orchestrator_start':
+      orchAutoReplyText = '';
+      orchAutoReplyDiv = addMessage('assistant', '');
+      const dot = document.createElement('span');
+      dot.className = 'loading';
+      orchAutoReplyDiv.appendChild(dot);
+      break;
+    case 'orchestrator_text':
+      orchAutoReplyText += event.data.delta;
+      if (orchAutoReplyDiv) {
+        orchAutoReplyDiv.innerHTML = renderMarkdown(orchAutoReplyText);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+      break;
+    case 'orchestrator_done':
+      if (orchAutoReplyDiv) {
+        const loadDot = orchAutoReplyDiv.querySelector('.loading');
+        if (loadDot) loadDot.remove();
+        if (!orchAutoReplyText) orchAutoReplyDiv.innerHTML = renderMarkdown('(无响应)');
+      }
+      orchAutoReplyDiv = null;
+      orchAutoReplyText = '';
+      break;
+  }
+}
+
+// ===== EventSource 长连接（接收后台任务通知）=====
+let evtSource = null;
+
+function connectEvents() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+  const token = tokenInput.value;
+  if (!token) return;
+  evtSource = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
+  evtSource.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data);
+      if (event.type === 'progress' && event.data?.taskId) {
+        handleBgTaskUpdate(event.data);
+      } else if (event.type === 'approval_needed' && event.data?.permissionId) {
+        showApprovalDialog(event.data);
+      } else if (event.type === 'orchestrator_start' || event.type === 'orchestrator_text' || event.type === 'orchestrator_done') {
+        handleOrchestratorEvent(event);
+      }
+    } catch {}
+  };
+  evtSource.onerror = () => {
+    // 自动重连（EventSource 内置），无需额外处理
+  };
+}
+
+// 页面加载时尝试连接
+if (tokenInput.value) {
+  connectEvents();
+  loadHistory();
+  loadBgTasks();
+}
+
+async function loadHistory() {
+  const token = tokenInput.value;
+  if (!token) return;
+  try {
+    const res = await fetch('/api/history', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.history && data.history.length > 0) {
+      for (const msg of data.history) {
+        addMessage(msg.role === 'user' ? 'user' : 'assistant', msg.content);
+      }
+    }
+  } catch {}
+}
+
+async function loadBgTasks() {
+  const token = tokenInput.value;
+  if (!token) return;
+  try {
+    const res = await fetch('/api/bg-tasks', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.tasks && data.tasks.length > 0) {
+      for (const task of data.tasks) {
+        // 添加到 bgTasks Map
+        bgTasks.set(task.taskId, {
+          taskId: task.taskId,
+          templateId: task.templateId,
+          description: task.description,
+          status: task.status,
+          startTime: task.startTime,
+          elapsed: task.elapsed,
+          result: task.result,
+          error: task.error,
+          cancelReason: task.cancelReason,
+          sandboxUrl: task.sandboxUrl,
+          sandboxAlive: task.sandboxAlive,
+          agentAlive: task.agentAlive,
+        });
+        // 如果任务还在运行，启动计时器
+        if (task.status === 'running' || task.status === 'queued') {
+          const timerId = setInterval(() => {
+            const el = document.getElementById('bg-timer-' + task.taskId);
+            const info = bgTasks.get(task.taskId);
+            if (el && info) el.textContent = formatDuration(Date.now() - info.startTime);
+          }, 100);
+          bgTimers.set(task.taskId, timerId);
+        }
+      }
+      renderTree();
+    }
+  } catch {}
+}
+
+// ===== 渲染任务树（包含 chat 流工具节点 + 后台任务节点）=====
+function renderTree() {
+  let html = '';
+
+  // Orchestrator 主树（当前 chat 流）
+  if (taskTree) {
+    html += renderNode(taskTree, true);
+  }
+
+  // 后台任务（独立于 chat 流）
+  for (const [id, bg] of bgTasks) {
+    html += renderBgTaskNode(bg);
+  }
+
+  if (!html) {
+    taskTreeEl.innerHTML = '<div class="tree-empty">等待任务...</div>';
+  } else {
+    taskTreeEl.innerHTML = html;
+  }
+}
+
+function renderBgTaskNode(bg) {
+  let statusHtml;
+  if (bg.status === 'running' || bg.status === 'queued') {
+    statusHtml = `<span class="tree-spinner agent"></span><span class="status-running-agent" id="bg-timer-${bg.taskId}">${bg.status === 'queued' ? '排队中' : formatDuration(Date.now() - bg.startTime)}</span>`;
+  } else if (bg.status === 'completed') {
+    statusHtml = `<span class="status-completed">✓ ${formatDuration(bg.elapsed || 0)}</span>`;
+  } else if (bg.status === 'cancelled') {
+    statusHtml = `<span class="status-error">⏹ 已取消</span>`;
+  } else {
+    statusHtml = `<span class="status-error">✗ 失败</span>`;
+  }
+
+  return `<div class="tree-node tree-root" style="margin-top:8px;padding-top:8px;border-top:1px solid #1b2838;">
+    <div class="tree-label">
+      <span class="tree-icon">🤖</span>
+      <span class="tree-name">${escapeHtml(bg.templateId || 'sub-agent')}</span>
+      ${statusHtml}
+    </div>
+    <div style="padding-left:26px"><span class="tree-detail">${escapeHtml(bg.description)}</span></div>
+  </div>`;
+}
+
+function renderNode(node, isRoot) {
+  const cls = isRoot ? 'tree-node tree-root' : 'tree-node';
+  let icon, statusHtml;
+
+  if (node.type === 'orchestrator') {
+    icon = '🧠';
+    if (node.status === 'running') {
+      statusHtml = `<span class="tree-spinner"></span><span class="status-running" id="timer-${node.id}">${formatDuration(Date.now() - node.startTime)}</span>`;
+    } else {
+      statusHtml = `<span class="status-completed">✓ ${formatDuration(node.durationMs)}</span>`;
+    }
+  } else {
+    icon = '🔧';
+    if (node.status === 'running') {
+      statusHtml = `<span class="tree-spinner"></span><span class="status-running" id="timer-${node.id}">${formatDuration(Date.now() - node.startTime)}</span>`;
+    } else if (node.status === 'completed') {
+      statusHtml = `<span class="status-completed">✓ ${formatDuration(node.durationMs)}</span>`;
+    } else {
+      statusHtml = `<span class="status-error">✗</span>`;
+    }
+  }
+
+  const detailHtml = node.detail ? `<span class="tree-detail" title="${escapeHtml(node.detail)}">${escapeHtml(node.detail)}</span>` : '';
+  let childrenHtml = '';
+  if (node.children && node.children.length > 0) {
+    childrenHtml = '<div class="tree-children">' + node.children.map(c => renderNode(c, false)).join('') + '</div>';
+  }
+
+  return `<div class="${cls}">
+    <div class="tree-label">
+      <span class="tree-icon">${icon}</span>
+      <span class="tree-name">${escapeHtml(node.name)}</span>
+      ${statusHtml}
+    </div>
+    ${detailHtml ? `<div style="padding-left:26px">${detailHtml}</div>` : ''}
+    ${childrenHtml}
+  </div>`;
+}
+
+function formatDuration(ms) {
+  if (ms < 1000) return ms + 'ms';
+  return (ms / 1000).toFixed(1) + 's';
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== Messages =====
+function addMessage(role, content) {
+  const div = document.createElement('div');
+  div.className = `msg msg-${role}`;
+  div.innerHTML = renderMarkdown(content);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div;
+}
+
+function renderMarkdown(text) {
+  return text
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function createToolPanel(name) {
+  const panel = document.createElement('div');
+  panel.className = 'tool-panel';
+  panel.innerHTML = `<div class="tool-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">🔧 ${escapeHtml(name)}</div><div class="tool-body"></div>`;
+  messagesEl.appendChild(panel);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return panel;
+}
+
+function showApprovalDialog(data) {
+  const overlay = document.createElement('div');
+  overlay.className = 'approval-overlay';
+  const toolName = escapeHtml(data.toolName || '');
+  const desc = escapeHtml(data.description || '');
+  let previewHtml = '';
+  if (data.inputPreview) {
+    const previewStr = typeof data.inputPreview === 'string' ? data.inputPreview : JSON.stringify(data.inputPreview, null, 2);
+    previewHtml = `<pre style="margin:10px 0;font-size:12px;max-height:160px;overflow:auto;background:#0d1b2a;padding:10px;border-radius:6px;color:#a0b0c0">${escapeHtml(previewStr)}</pre>`;
+  }
+  overlay.innerHTML = `
+    <div class="approval-modal">
+      <div style="margin-bottom:12px;font-size:16px"><strong>⚠️ 需要确认操作</strong></div>
+      <div style="font-size:13px;color:#a0b0c0">任务: ${desc}</div>
+      <div style="font-size:14px;color:#e0e0e0;margin-top:6px">工具: <code>${toolName}</code></div>
+      ${previewHtml}
+      <div style="margin-top:16px">
+        <button class="btn-confirm">✓ 允许执行</button>
+        <button class="btn-cancel">✗ 拒绝</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const confirmBtn = overlay.querySelector('.btn-confirm');
+  const cancelBtn = overlay.querySelector('.btn-cancel');
+  confirmBtn.addEventListener('click', () => { sendApproval(data.permissionId, 'allow', overlay); });
+  cancelBtn.addEventListener('click', () => { sendApproval(data.permissionId, 'deny', overlay); });
+}
+
+async function sendApproval(permissionId, decision, overlay) {
+  const token = tokenInput.value;
+  try {
+    const btns = overlay.querySelectorAll('button');
+    btns.forEach(b => b.disabled = true);
+    await fetch('/api/approval', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permissionId, decision }),
+    });
+  } catch (err) {
+    addMessage('system', `审批操作失败: ${err.message}`);
+  } finally {
+    overlay.remove();
+  }
+}
+
+async function sendCommand(command) {
+  const token = tokenInput.value;
+  await fetch('/api/command', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command }),
+  });
+}
+
+function showSandboxPreview(taskId, url, description) {
+  const div = document.createElement('div');
+  div.className = 'approval-dialog';
+  div.style.borderColor = '#5bc0de';
+  div.innerHTML = `
+    <div style="margin-bottom:8px"><strong>🌐 沙箱预览</strong></div>
+    <div style="font-size:13px;color:#a0b0c0;margin-bottom:8px">${escapeHtml(description)}</div>
+    <div style="margin-bottom:10px">
+      <a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:#5bc0de;font-size:14px;word-break:break-all">${escapeHtml(url)}</a>
+    </div>
+    <div>
+      <button class="btn-confirm" style="background:#5bc0de" onclick="window.open('${escapeHtml(url)}','_blank')">🔗 打开预览</button>
+      <button class="btn-cancel" id="dispose-btn-${escapeHtml(taskId)}">🗑️ 销毁沙箱</button>
+    </div>
+    <div style="font-size:11px;color:#5b6b7b;margin-top:8px">沙箱将在 30 分钟后自动销毁</div>
+  `;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  const disposeBtn = document.getElementById('dispose-btn-' + taskId);
+  if (disposeBtn) {
+    disposeBtn.addEventListener('click', async () => {
+      disposeBtn.disabled = true;
+      disposeBtn.textContent = '销毁中...';
+      try {
+        const token = tokenInput.value;
+        const res = await fetch('/api/sandbox/dispose', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId }),
+        });
+        if (res.ok) {
+          div.style.opacity = '0.5';
+          div.querySelector('div:last-of-type').innerHTML = '<span style="color:#5b6b7b">沙箱已销毁</span>';
+        }
+      } catch {}
+    });
+  }
+}
+
+async function sendMessage() {
+  const message = inputEl.value.trim();
+  if (!message || sending) return;
+
+  const token = tokenInput.value;
+  if (!token) { alert('请先输入 Auth Token'); return; }
+
+  sending = true;
+  sendBtn.disabled = true;
+  inputEl.value = '';
+
+  addMessage('user', message);
+  initTree();
+
+  const assistantDiv = addMessage('assistant', '');
+  const loadingDot = document.createElement('span');
+  loadingDot.className = 'loading';
+  assistantDiv.appendChild(loadingDot);
+
+  let currentToolPanel = null;
+  let fullText = '';
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      assistantDiv.innerHTML = renderMarkdown(`❌ Error: ${err.error || res.statusText}`);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value);
+      for (const line of text.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        let event;
+        try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+        switch (event.type) {
+          case 'text':
+            fullText += event.data.delta;
+            assistantDiv.innerHTML = renderMarkdown(fullText);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            break;
+          case 'thinking':
+          case 'phase':
+            break;
+          case 'tool_start':
+            addChildNode(event.data);
+            currentToolPanel = createToolPanel(event.data.name);
+            break;
+          case 'tool_end':
+            completeChildNode(event.data);
+            if (currentToolPanel) {
+              const body = currentToolPanel.querySelector('.tool-body');
+              if (body) body.textContent = typeof event.data.result === 'string' ? event.data.result : JSON.stringify(event.data.result, null, 2);
+            }
+            currentToolPanel = null;
+            break;
+          case 'tool_error':
+            errorChildNode(event.data);
+            if (currentToolPanel) {
+              const body = currentToolPanel.querySelector('.tool-body');
+              if (body) { body.textContent = '❌ ' + (event.data.error || '执行失败'); body.style.display = 'block'; }
+            }
+            currentToolPanel = null;
+            break;
+          case 'approval_needed':
+            showApprovalDialog(event.data);
+            break;
+          case 'done':
+            finishTree();
+            break;
+          case 'error':
+            fullText += `\n❌ ${event.data.message}`;
+            assistantDiv.innerHTML = renderMarkdown(fullText);
+            break;
+        }
+      }
+    }
+  } catch (err) {
+    assistantDiv.innerHTML = renderMarkdown(`❌ Network error: ${err.message}`);
+  } finally {
+    const dot = assistantDiv.querySelector('.loading');
+    if (dot) dot.remove();
+    if (!fullText && assistantDiv.textContent === '') {
+      assistantDiv.innerHTML = renderMarkdown('(无响应)');
+    }
+    finishTree();
+    sending = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+inputEl.focus();
+</script>
+</body>
+</html>

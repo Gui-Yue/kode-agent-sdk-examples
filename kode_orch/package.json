@@ -1,0 +1,42 @@
+{
+  "name": "kode-orch",
+  "version": "0.1.0",
+  "description": "AI Personal Assistant Orchestrator based on KODE SDK",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "postinstall": "node patch-sdk.js"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "orchestrator",
+    "assistant"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "~1.22.0",
+    "ajv": "^8.17.1",
+    "dotenv": "^16.4.5",
+    "e2b": "^2.10.3",
+    "fast-glob": "^3.3.2",
+    "pg": "^8.17.2",
+    "undici": "^7.18.2",
+    "zod": "~3.23.8",
+    "zod-to-json-schema": "~3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.16.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
