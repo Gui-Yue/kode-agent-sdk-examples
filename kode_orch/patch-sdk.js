@@ -4,8 +4,12 @@
  * 修复 SDK 的 Agent.create() 中 E2B 沙箱未初始化的问题
  * 将 sandboxFactory.create() 替换为 await sandboxFactory.createAsync()
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const agentFile = path.join(__dirname, 'node_modules/@shareai-lab/kode-sdk/dist/core/agent.js');
 

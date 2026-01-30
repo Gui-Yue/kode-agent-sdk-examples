@@ -1,0 +1,48 @@
+{
+  "name": "@shareai-lab/sdk-demo-system-patrol",
+  "version": "1.0.0",
+  "description": "KODE SDK 示例：系统巡检助手 - 展示 Scheduler + 自定义工具主动式服务能力",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "system-patrol": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "tsc && node dist/cli.js"
+  },
+  "keywords": [
+    "kode-sdk",
+    "agent",
+    "patrol",
+    "scheduler",
+    "monitoring"
+  ],
+  "author": "ShareAI Lab",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/kode-agent-sdk-examples",
+    "directory": "system-patrol"
+  },
+  "dependencies": {
+    "@shareai-lab/kode-sdk": "^2.7.2",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "picocolors": "^1.0.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

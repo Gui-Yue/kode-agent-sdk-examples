@@ -1,0 +1,49 @@
+{
+  "name": "@shareai-lab/sdk-demo-skill-agent",
+  "version": "1.0.0",
+  "description": "KODE SDK 示例：可插拔技能系统 - 展示 SkillsManager + SKILL.md 技能包能力",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "skill-agent": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "skills"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "tsc && node dist/cli.js"
+  },
+  "keywords": [
+    "kode-sdk",
+    "agent",
+    "skills",
+    "plugin",
+    "markdown"
+  ],
+  "author": "ShareAI Lab",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/kode-agent-sdk-examples",
+    "directory": "skill-plugin"
+  },
+  "dependencies": {
+    "@shareai-lab/kode-sdk": "^2.7.2",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "picocolors": "^1.0.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

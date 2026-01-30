@@ -20,6 +20,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
+    "@shareai-lab/kode-sdk": "^2.7.2",
     "@modelcontextprotocol/sdk": "~1.22.0",
     "ajv": "^8.17.1",
     "dotenv": "^16.4.5",

@@ -167,6 +167,7 @@ export class BgTaskRunner {
         agentId: task.id,
         model: this.provider,
         sandbox,
+        metadata: { maxTokens: 16384 }, // 增大 maxTokens 以支持生成较大的代码文件
       };
       subAgent = await Agent.create(config, this.deps);
       this.agents.set(task.id, subAgent);

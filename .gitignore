@@ -10,6 +10,7 @@ dist/
 !.env.example
 
 # IDE
+.claude
 .idea/
 .vscode/
 *.swp
@@ -24,8 +25,7 @@ Thumbs.db
 logs/
 
 # Data files (local)
-data/*.db
-data/*.sqlite
+data/
 
 # Lock files (optional, comment out if you want to commit)
 # pnpm-lock.yaml
@@ -34,8 +34,10 @@ data/*.sqlite
 # doc
 *.md
 !README.md
+!**/README.md
 !doc/**/*.md
 !README_en.md
+!**/SKILL.md
 
 # workspace
 workspace*/

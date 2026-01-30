@@ -1,0 +1,50 @@
+{
+  "name": "@shareai-lab/sdk-demo-memory-agent",
+  "version": "1.0.0",
+  "description": "KODE SDK 示例：记忆 Agent - 展示对话持久化和上下文恢复能力",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "memory-agent": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "start:resume": "node dist/cli.js --resume",
+    "start:reset": "node dist/cli.js --reset",
+    "dev": "tsc && node dist/cli.js"
+  },
+  "keywords": [
+    "kode-sdk",
+    "agent",
+    "memory",
+    "persistence",
+    "context"
+  ],
+  "author": "ShareAI Lab",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/kode-agent-sdk-examples",
+    "directory": "memory-agent"
+  },
+  "dependencies": {
+    "@shareai-lab/kode-sdk": "^2.7.2",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "picocolors": "^1.0.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

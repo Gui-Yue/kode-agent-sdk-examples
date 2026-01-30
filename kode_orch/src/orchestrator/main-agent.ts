@@ -145,6 +145,7 @@ export async function createOrchestrator(opts: CreateOrchestratorOptions): Promi
       templateId: 'orchestrator',
       model: provider,
       sandbox,
+      metadata: { maxTokens: 16384 }, // 增大 maxTokens 以支持生成较大的响应
     },
     deps,
   );
